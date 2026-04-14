@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Photo Mission</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1a1f1a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap');
+
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-base: #1a1f1a;
+      --bg-surface: #212621;
+      --bg-elevated: #2B332B;
+      --bg-card: #222822;
+      --text-primary: #F3EFE9;
+      --text-secondary: #818379;
+      --text-muted: #5c5e56;
+      --accent: #F3EFE9;
+      --accent-dim: #818379;
+      --accent-glow: rgba(243, 239, 233, 0.08);
+      --accent-glow-strong: rgba(243, 239, 233, 0.15);
+      --border: rgba(243, 239, 233, 0.08);
+      --border-accent: rgba(243, 239, 233, 0.15);
+      --spring: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    body {
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 24px 20px;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 460px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+      margin-top: 40px;
+    }
+
+    /* --- Header --- */
+    .header {
+      text-align: center;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeUp 0.8s var(--spring) 0.1s forwards;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .brand-logo { width: 44px; height: 40px; }
+    .brand-logo svg { width: 100%; height: 100%; }
+
+    .header h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--text-primary);
+    }
+
+    .header p {
+      font-size: 15px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    /* --- Streak --- */
+    .streak-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      opacity: 0;
+      animation: fadeUp 0.8s var(--spring) 0.2s forwards;
+      transform: translateY(20px);
+    }
+
+    .streak-bar svg {
+      width: 18px;
+      height: 18px;
+      color: var(--accent-dim);
+    }
+
+    .streak-count {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    /* --- Mission Card --- */
+    .mission-card {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px 28px;
+      position: relative;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeUp 0.8s var(--spring) 0.25s forwards;
+      transition: border-color 0.6s ease, box-shadow 0.6s ease;
+    }
+
+    .mission-card.active {
+      border-color: var(--border-accent);
+      box-shadow: 0 0 40px var(--accent-glow), 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Top scan line */
+    .mission-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent-dim), transparent);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .mission-card.active::before {
+      opacity: 1;
+    }
+
+    /* Scan line animation (disabled) */
+    .scan-line { display: none; }
+    }
+
+    .card-date {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--accent-dim);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-date .dot {
+      width: 6px;
+      height: 6px;
+      background: var(--accent-dim);
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .mission-card.active .card-date .dot {
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .mission-text {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 24px;
+      font-weight: 600;
+      line-height: 1.4;
+      color: var(--text-primary);
+      min-height: 0;
+      display: flex;
+      align-items: center;
+    }
+
+    .card-action {
+      margin-top: 20px;
+      transition: opacity 0.3s ease, max-height 0.4s ease;
+      max-height: 80px;
+      overflow: hidden;
+    }
+
+    .card-action.fading {
+      opacity: 0;
+      max-height: 0;
+      margin-top: 0;
+    }
+
+    .mission-card.active .card-action {
+      display: none;
+    }
+
+    .mission-text .cursor {
+      display: inline-block;
+      width: 2px;
+      height: 1.2em;
+      background: var(--accent);
+      margin-left: 2px;
+      vertical-align: text-bottom;
+      animation: blink 0.6s step-end infinite;
+    }
+
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    .welcome-state {
+      color: var(--text-muted);
+      font-weight: 400;
+      font-size: 20px;
+    }
+
+    /* --- Mission Code --- */
+    .mission-code {
+      display: none;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .mission-card.active .mission-code {
+      display: block;
+      animation: fadeUp 0.4s var(--spring) 0.15s both;
+    }
+
+    .mission-code-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .mission-code-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .mission-code-value {
+      font-family: 'Space Grotesk', monospace;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 2px;
+    }
+
+    .btn-copy, .btn-share {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      background: var(--accent-glow);
+      border: 1px solid var(--border-accent);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .btn-copy:hover, .btn-share:hover {
+      background: var(--accent-glow-strong);
+    }
+
+    .btn-copy:active, .btn-share:active {
+      transform: scale(0.96);
+    }
+
+    .btn-copy svg, .btn-share svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .btn-copy.copied {
+      color: #34d399;
+      border-color: rgba(52, 211, 153, 0.3);
+      background: rgba(52, 211, 153, 0.1);
+    }
+
+    .mission-code-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 10px;
+      line-height: 1.5;
+    }
+
+    /* --- Community Tag --- */
+    .community-tag {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .mission-card.active .community-tag {
+      display: flex;
+      animation: fadeUp 0.4s var(--spring) 0.3s both;
+    }
+
+    .community-tag svg {
+      width: 14px;
+      height: 14px;
+      color: var(--accent-dim);
+      flex-shrink: 0;
+    }
+
+    .category-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent);
+      background: var(--accent-glow);
+      padding: 4px 10px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      opacity: 0;
+      transition: opacity 0.3s ease 0.1s;
+    }
+
+    .mission-card.active .category-badge {
+      opacity: 1;
+    }
+
+    /* --- Actions --- */
+    .actions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeUp 0.8s var(--spring) 0.4s forwards;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .btn-generate {
+      width: 100%;
+      padding: 18px 32px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--bg-base);
+      background: var(--accent);
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: transform 0.15s var(--spring), box-shadow 0.3s ease;
+      box-shadow: 0 4px 20px rgba(243, 239, 233, 0.1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-generate:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(243, 239, 233, 0.15);
+    }
+
+    .btn-generate:active {
+      transform: translateY(1px) scale(0.98);
+      box-shadow: 0 2px 10px rgba(243, 239, 233, 0.08);
+    }
+
+    .btn-generate::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .btn-generate:hover::after {
+      opacity: 1;
+    }
+
+    .btn-secondary {
+      flex: 1;
+      padding: 14px 16px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--accent);
+      background: var(--accent-glow);
+      border: 1px solid var(--border-accent);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-secondary:hover {
+      background: var(--accent-glow-strong);
+    }
+
+    .btn-secondary:active {
+      transform: scale(0.97);
+    }
+
+    .btn-secondary svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .btn-secondary.hidden, .btn-generate.hidden {
+      opacity: 0;
+      transform: translateY(-20px);
+      pointer-events: none;
+    }
+
+    .btn-secondary, .btn-generate {
+      transition: opacity 0.5s var(--spring), transform 0.5s var(--spring);
+    }
+
+    .btn-row .btn-secondary:nth-child(1) { transition-delay: 0.1s; }
+    .btn-row .btn-secondary:nth-child(2) { transition-delay: 0.2s; }
+
+    /* --- Countdown --- */
+    .countdown {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      color: var(--text-muted);
+      text-align: center;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .countdown.visible {
+      opacity: 1;
+    }
+
+    .countdown-time {
+      color: var(--text-secondary);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    /* --- Past Missions Drawer --- */
+    .drawer-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 10, 15, 0.7);
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      backdrop-filter: blur(4px);
+    }
+
+    .drawer-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .drawer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      max-height: 70vh;
+      background: var(--bg-surface);
+      border-radius: 20px 20px 0 0;
+      z-index: 101;
+      transform: translateY(100%);
+      transition: transform 0.4s var(--spring);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .drawer.open {
+      transform: translateY(0);
+    }
+
+    .drawer-handle {
+      width: 40px;
+      height: 4px;
+      background: var(--text-muted);
+      border-radius: 2px;
+      margin: 12px auto 0;
+      flex-shrink: 0;
+    }
+
+    .drawer-header {
+      padding: 16px 24px 12px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .drawer-list {
+      overflow-y: auto;
+      padding: 8px 16px 32px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .drawer-item {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      cursor: default;
+    }
+
+    .drawer-item-date {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--accent-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .drawer-item-code {
+      font-family: 'Space Grotesk', monospace;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .drawer-item-text {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text-primary);
+      line-height: 1.4;
+    }
+
+    .drawer-item-category {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--accent-dim);
+      background: var(--accent-glow);
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-top: 8px;
+    }
+
+    /* --- Footer --- */
+    .footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      opacity: 0;
+      animation: fadeUp 0.8s var(--spring) 0.6s forwards;
+      padding-bottom: 20px;
+    }
+
+    /* --- Background --- */
+    .bg-glow {
+      position: fixed;
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .bg-glow-1 {
+      top: -100px;
+      right: -100px;
+      background: rgba(129, 131, 121, 0.08);
+    }
+
+    .bg-glow-2 {
+      bottom: -100px;
+      left: -100px;
+      background: rgba(129, 131, 121, 0.06);
+    }
+
+    /* --- Animations --- */
+    @keyframes fadeUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    @media (min-width: 480px) {
+      .header h1 { font-size: 32px; }
+      .mission-text { font-size: 26px; }
+    }
+
+    /* --- Share canvas (hidden) --- */
+    #shareCanvas { display: none; }
+  </style>
+</head>
+<body>
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+
+  <div class="container">
+    <header class="header">
+      <h1>Daily Photo Mission</h1>
+      <p>One prompt. One day. Everyone shoots.</p>
+    </header>
+
+    <div class="streak-bar" id="streakBar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+      </svg>
+      <span><span class="streak-count" id="streakCount">0</span> day streak</span>
+    </div>
+
+    <div class="mission-card" id="missionCard">
+      <div class="scan-line" id="scanLine"></div>
+      <div class="card-date" id="cardDate">
+        <span class="dot"></span>
+        <span id="dateText"></span>
+      </div>
+      <div class="category-badge" id="categoryBadge"></div>
+      <div class="mission-text" id="missionText">
+        <span class="welcome-state">Ready for today's mission?</span>
+      </div>
+      <div class="card-action" id="cardAction">
+        <button class="btn-generate" id="btnGenerateInner" onclick="generateMission()">
+          Generate Today's Mission
+        </button>
+      </div>
+      <div class="mission-code" id="missionCode">
+        <div class="mission-code-label">Mission Code</div>
+        <div class="mission-code-row">
+          <span class="mission-code-value" id="missionCodeValue"></span>
+          <button class="btn-copy" id="btnCopy" onclick="copyCode()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            <span id="copyLabel">Copy</span>
+          </button>
+        </div>
+        <div class="mission-code-hint">Tag your shots with this code so others can find today's mission</div>
+      </div>
+      <div class="community-tag">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        <span>Everyone's shooting this today</span>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-generate hidden" id="btnGenerate" onclick="generateMission()">
+        Today's Mission
+      </button>
+      <div class="btn-row">
+        <button class="btn-secondary hidden" id="btnShare" onclick="shareMission()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+          Share
+        </button>
+        <button class="btn-secondary hidden" id="btnPast" onclick="openDrawer()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          Past Missions
+        </button>
+      </div>
+      <div class="countdown" id="countdown"></div>
+    </div>
+
+    <footer class="footer">
+      <p>V1 &middot; Made by Wyatt Smith &middot; 2026</p>
+    </footer>
+  </div>
+
+  <!-- Past Missions Drawer -->
+  <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+  <div class="drawer" id="drawer">
+    <div class="drawer-handle"></div>
+    <div class="drawer-header">Past Missions</div>
+    <div class="drawer-list" id="drawerList"></div>
+  </div>
+
+  <canvas id="shareCanvas" width="1080" height="1080"></canvas>
+
+  <script>
+    const PROMPTS = [
+      { text: "Find something bright yellow against a dark background.", category: "Color" },
+      { text: "Capture three different shades of blue in a single frame.", category: "Color" },
+      { text: "Hunt for red in a place you wouldn't expect it.", category: "Color" },
+      { text: "Photograph a color gradient you find in nature.", category: "Color" },
+      { text: "Find where two bold colors collide.", category: "Color" },
+      { text: "Shoot something orange that isn't a sunset.", category: "Color" },
+      { text: "Capture a scene that's almost entirely one color.", category: "Color" },
+      { text: "Find a pop of color in a dull environment.", category: "Color" },
+      { text: "Hunt for perfect circles in unexpected places.", category: "Shape" },
+      { text: "Find where straight lines meet curves.", category: "Shape" },
+      { text: "Photograph a triangle you've never noticed before.", category: "Shape" },
+      { text: "Capture repeating patterns in architecture.", category: "Shape" },
+      { text: "Find something spiral-shaped.", category: "Shape" },
+      { text: "Shoot a scene dominated by diagonal lines.", category: "Shape" },
+      { text: "Photograph a pointy object with dramatic lighting.", category: "Shape" },
+      { text: "Find symmetry where you least expect it.", category: "Shape" },
+      { text: "Capture something rough next to something smooth.", category: "Texture" },
+      { text: "Find a surface that tells a story through its wear.", category: "Texture" },
+      { text: "Photograph peeling paint, rust, or decay up close.", category: "Texture" },
+      { text: "Capture something soft in hard light.", category: "Texture" },
+      { text: "Find a texture that looks like it belongs on another planet.", category: "Texture" },
+      { text: "Shoot the most interesting wall you can find.", category: "Texture" },
+      { text: "Fill your frame with a single repeating texture.", category: "Texture" },
+      { text: "Photograph something people walk past every day without noticing.", category: "Discovery" },
+      { text: "Find the oldest thing within sight and make it beautiful.", category: "Discovery" },
+      { text: "Capture something that's in the wrong place.", category: "Discovery" },
+      { text: "Photograph a sign that takes on new meaning out of context.", category: "Discovery" },
+      { text: "Find something abandoned and give it a portrait.", category: "Discovery" },
+      { text: "Shoot the most interesting door you can find.", category: "Discovery" },
+      { text: "Photograph a detail that reveals something about the people nearby.", category: "Discovery" },
+      { text: "Find beauty in a puddle.", category: "Discovery" },
+      { text: "Get as low as possible \u2014 shoot from the ground up.", category: "Perspective" },
+      { text: "Find a frame within a frame.", category: "Perspective" },
+      { text: "Shoot straight down at something beneath your feet.", category: "Perspective" },
+      { text: "Photograph something from a perspective that makes it unrecognizable.", category: "Perspective" },
+      { text: "Find a reflection and make it the subject.", category: "Perspective" },
+      { text: "Shoot through something \u2014 glass, fence, leaves, hands.", category: "Perspective" },
+      { text: "Capture a scene from the highest vantage point you can reach.", category: "Perspective" },
+      { text: "Get close. Closer. Now shoot.", category: "Perspective" },
+      { text: "Chase a shadow and make it the subject.", category: "Light" },
+      { text: "Find where light leaks through a gap.", category: "Light" },
+      { text: "Photograph a silhouette against the sky.", category: "Light" },
+      { text: "Capture the way light changes between inside and outside.", category: "Light" },
+      { text: "Find a spotlight \u2014 natural or artificial \u2014 and wait for something to enter it.", category: "Light" },
+      { text: "Shoot into the light on purpose.", category: "Light" },
+      { text: "Photograph the longest shadow you can find.", category: "Light" },
+      { text: "Capture a moment where light and shadow split the frame in half.", category: "Light" },
+      { text: "Shoot something tiny like it's enormous.", category: "Composition" },
+      { text: "Compose a photo with nothing in the center.", category: "Composition" },
+      { text: "Find leading lines that pull the eye somewhere unexpected.", category: "Composition" },
+      { text: "Capture negative space \u2014 let emptiness tell the story.", category: "Composition" },
+      { text: "Photograph the same subject three different ways, then pick your best.", category: "Composition" },
+      { text: "Create a photo that reads like a sentence \u2014 beginning, middle, end.", category: "Composition" },
+      { text: "Use a doorway, arch, or window as your compositional anchor.", category: "Composition" },
+      { text: "Take 10 photos in 10 minutes. Only keep one.", category: "Challenge" },
+      { text: "Find something beautiful in something ugly.", category: "Challenge" },
+      { text: "Shoot only in black and white today (or edit that way).", category: "Challenge" },
+      { text: "Photograph a stranger's hands (ask nicely).", category: "Challenge" },
+      { text: "Capture five different emotions in five different photos.", category: "Challenge" },
+      { text: "Only shoot things smaller than your fist.", category: "Challenge" },
+      { text: "Make an ordinary object look extraordinary.", category: "Challenge" },
+      { text: "Photograph something that will look completely different in a year.", category: "Challenge" },
+      { text: "Use your phone's front camera for everything today.", category: "Challenge" },
+      { text: "Capture a photo that feels lonely.", category: "Mood" },
+      { text: "Find something that looks like it's waiting.", category: "Mood" },
+      { text: "Photograph motion frozen in time.", category: "Mood" },
+      { text: "Tell a story with just two objects in the frame.", category: "Mood" },
+      { text: "Capture the feeling of a place, not just the look.", category: "Mood" },
+      { text: "Photograph something that reminds you of a memory.", category: "Mood" },
+      { text: "Find contrast \u2014 old/new, big/small, loud/quiet.", category: "Mood" },
+      { text: "Shoot a scene that feels like the opening frame of a film.", category: "Mood" },
+      { text: "Capture something in the moment right before it changes.", category: "Mood" },
+      { text: "Photograph water doing something interesting.", category: "Nature" },
+      { text: "Find where nature is reclaiming something man-made.", category: "Nature" },
+      { text: "Capture the sky \u2014 but make it more than just a sky photo.", category: "Nature" },
+      { text: "Find the smallest living thing you can and give it a close-up.", category: "Nature" },
+      { text: "Photograph a tree like you've never seen one before.", category: "Nature" },
+      { text: "Capture the wind. You can't see it \u2014 but show its effect.", category: "Nature" },
+    ];
+
+    // ============================================================
+    // Combinatorial engine (fallback)
+    // ============================================================
+    const GEN_ACTIONS = [
+      "Photograph", "Capture", "Find", "Hunt for", "Shoot",
+      "Search for", "Frame", "Document", "Seek out", "Isolate"
+    ];
+    const GEN_SUBJECTS = [
+      "a shadow", "a reflection", "something broken", "something new",
+      "a pattern", "a single color", "two contrasting objects", "a texture",
+      "something metallic", "something wooden", "a curve", "a straight line",
+      "something forgotten", "a pair", "something transparent", "an edge",
+      "a silhouette", "something round", "something sharp", "a gap",
+      "something living", "something still", "a surface", "a doorway",
+      "something weathered", "a mark someone left behind", "an intersection",
+      "something out of place", "a detail most people miss", "something temporary"
+    ];
+    const GEN_MODIFIERS = [
+      "from below", "in dramatic light", "as close as you can get",
+      "with your non-dominant hand", "in black and white",
+      "so it fills the entire frame", "from at least 20 feet away",
+      "through something transparent", "at the golden hour",
+      "with a person for scale", "using only natural light",
+      "so it looks like abstract art", "with leading lines",
+      "framed by architecture", "with negative space",
+      "so it tells a story", "with the sky in the background",
+      "in a way that shows motion", "with strong contrast",
+      "making it look massive", "making it look tiny",
+      "with something blurred in the foreground"
+    ];
+    const GEN_CATEGORIES = [
+      "Light", "Composition", "Perspective", "Texture",
+      "Color", "Shape", "Discovery", "Challenge", "Mood", "Nature"
+    ];
+
+    function hashStr(str) {
+      let h = 0;
+      for (let i = 0; i < str.length; i++) {
+        h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+      }
+      return Math.abs(h);
+    }
+
+    function pick(arr, hash) {
+      return arr[hash % arr.length];
+    }
+
+    function generateCombinatorialPrompt(dateStr) {
+      const h1 = hashStr('ACT' + dateStr);
+      const h2 = hashStr('SUB' + dateStr);
+      const h3 = hashStr('MOD' + dateStr);
+      const h4 = hashStr('CAT' + dateStr);
+      return {
+        text: `${pick(GEN_ACTIONS, h1)} ${pick(GEN_SUBJECTS, h2)} ${pick(GEN_MODIFIERS, h3)}.`,
+        category: pick(GEN_CATEGORIES, h4)
+      };
+    }
+
+    // ============================================================
+    // Date helpers
+    // ============================================================
+    const LAUNCH_DATE = '2026-04-14';
+
+    function getTodayString() {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    }
+
+    function daysSince(startStr, todayStr) {
+      const start = new Date(startStr + 'T00:00:00');
+      const today = new Date(todayStr + 'T00:00:00');
+      return Math.floor((today - start) / 86400000);
+    }
+
+    function getFormattedDate(dateStr) {
+      const d = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
+      return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    }
+
+    function getShortDate(dateStr) {
+      const d = new Date(dateStr + 'T00:00:00');
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function generateMissionCode(dateStr) {
+      let hash = 0;
+      const seed = 'DPM' + dateStr;
+      for (let i = 0; i < seed.length; i++) {
+        const char = seed.charCodeAt(i);
+        hash = ((hash << 7) - hash + char) | 0;
+        hash = ((hash << 13) ^ hash) | 0;
+        hash = (hash * 2654435761) | 0;
+      }
+      return '#' + String(Math.abs(hash) % 100000).padStart(5, '0');
+    }
+
+    function getPromptForDate(dateStr) {
+      const dayNum = daysSince(LAUNCH_DATE, dateStr);
+      const code = generateMissionCode(dateStr);
+      if (dayNum >= 0 && dayNum < PROMPTS.length) {
+        return { ...PROMPTS[dayNum], code };
+      }
+      return { ...generateCombinatorialPrompt(dateStr), code };
+    }
+
+    // ============================================================
+    // Streak tracker
+    // ============================================================
+    function getStreak() {
+      try {
+        return JSON.parse(localStorage.getItem('dpm_streak') || '{"count":0,"lastDate":""}');
+      } catch { return { count: 0, lastDate: '' }; }
+    }
+
+    function updateStreak() {
+      const today = getTodayString();
+      const streak = getStreak();
+      if (streak.lastDate === today) return streak.count;
+
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+
+      let newCount;
+      if (streak.lastDate === yStr) {
+        newCount = streak.count + 1;
+      } else {
+        newCount = 1;
+      }
+      localStorage.setItem('dpm_streak', JSON.stringify({ count: newCount, lastDate: today }));
+      return newCount;
+    }
+
+    function displayStreak() {
+      const streak = getStreak();
+      const el = document.querySelector('#streakBar .streak-count');
+      if (el) el.textContent = streak.count;
+    }
+
+    // ============================================================
+    // Typewriter animation
+    // ============================================================
+    let typewriterTimer = null;
+
+    function typewrite(el, text, callback) {
+      if (typewriterTimer) clearTimeout(typewriterTimer);
+      el.innerHTML = '<span class="cursor"></span>';
+      let i = 0;
+      const baseSpeed = 65;
+
+      function typeNext() {
+        if (i < text.length) {
+          const cursor = el.querySelector('.cursor');
+          if (cursor) cursor.insertAdjacentText('beforebegin', text[i]);
+          i++;
+          // Uneven rhythm — pauses at punctuation, slight variance per key
+          let delay = baseSpeed + Math.random() * 40;
+          if (text[i - 1] === '.' || text[i - 1] === ',' || text[i - 1] === '\u2014') delay += 180;
+          else if (text[i - 1] === ' ') delay += 30;
+          typewriterTimer = setTimeout(typeNext, delay);
+        } else {
+          typewriterTimer = null;
+          const cursor = el.querySelector('.cursor');
+          if (cursor) setTimeout(() => cursor.remove(), 2000);
+          if (callback) callback();
+        }
+      }
+      typeNext();
+    }
+
+    // ============================================================
+    // Mission reveal
+    // ============================================================
+    let currentPrompt = null;
+
+    function showPrompt(prompt) {
+      currentPrompt = prompt;
+      const card = document.getElementById('missionCard');
+      const textEl = document.getElementById('missionText');
+      const badge = document.getElementById('categoryBadge');
+      const codeVal = document.getElementById('missionCodeValue');
+      const cardAction = document.getElementById('cardAction');
+
+      // Phase 1: Fade out the inner button
+      cardAction.classList.add('fading');
+
+      // Phase 2: After button fades, start the reveal
+      setTimeout(() => {
+        textEl.innerHTML = '';
+        badge.textContent = '';
+        codeVal.textContent = '';
+        badge.textContent = prompt.category;
+        card.classList.add('active');
+
+        // Phase 3: Typewriter starts
+        typewrite(textEl, prompt.text, () => {
+          codeVal.textContent = prompt.code;
+
+          // Show action buttons below card after typing finishes
+          document.getElementById('btnGenerate').classList.remove('hidden');
+          document.getElementById('btnShare').classList.remove('hidden');
+          document.getElementById('btnPast').classList.remove('hidden');
+        });
+
+        // Start countdown
+        startCountdown();
+      }, 400);
+    }
+
+    function generateMission() {
+      const prompt = getPromptForDate(getTodayString());
+      const streak = updateStreak();
+      displayStreak();
+      showPrompt(prompt);
+    }
+
+    // ============================================================
+    // Countdown to next mission
+    // ============================================================
+    let countdownInterval = null;
+
+    function startCountdown() {
+      const el = document.getElementById('countdown');
+      el.classList.add('visible');
+
+      function update() {
+        const now = new Date();
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(0, 0, 0, 0);
+        const diff = tomorrow - now;
+        const h = Math.floor(diff / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        el.innerHTML = `Next mission in <span class="countdown-time">${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s</span>`;
+      }
+
+      update();
+      if (countdownInterval) clearInterval(countdownInterval);
+      countdownInterval = setInterval(update, 1000);
+    }
+
+    // ============================================================
+    // Copy code
+    // ============================================================
+    function copyCode() {
+      const code = document.getElementById('missionCodeValue').textContent;
+      const btn = document.getElementById('btnCopy');
+      const label = document.getElementById('copyLabel');
+      navigator.clipboard.writeText(code).then(() => {
+        btn.classList.add('copied');
+        label.textContent = 'Copied!';
+        setTimeout(() => { btn.classList.remove('copied'); label.textContent = 'Copy'; }, 2000);
+      });
+    }
+
+    // ============================================================
+    // Share card (canvas-based)
+    // ============================================================
+    function shareMission() {
+      if (!currentPrompt) return;
+      const canvas = document.getElementById('shareCanvas');
+      const ctx = canvas.getContext('2d');
+      const w = 1080, h = 1080;
+
+      // Background
+      ctx.fillStyle = '#1a1f1a';
+      ctx.fillRect(0, 0, w, h);
+
+      // Subtle border
+      ctx.strokeStyle = 'rgba(243, 239, 233, 0.1)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(60, 60, w - 120, h - 120);
+
+      // Top line accent
+      ctx.fillStyle = '#818379';
+      ctx.fillRect(60, 60, w - 120, 3);
+
+      // "DAILY PHOTO MISSION" header
+      ctx.fillStyle = '#818379';
+      ctx.font = '600 28px "Space Grotesk", sans-serif';
+      ctx.letterSpacing = '4px';
+      ctx.textAlign = 'center';
+      ctx.fillText('DAILY PHOTO MISSION', w / 2, 160);
+
+      // Date
+      ctx.fillStyle = '#5c5e56';
+      ctx.font = '400 24px "DM Sans", sans-serif';
+      ctx.fillText(getFormattedDate(), w / 2, 210);
+
+      // Category badge
+      ctx.fillStyle = 'rgba(243, 239, 233, 0.08)';
+      const catText = currentPrompt.category.toUpperCase();
+      ctx.font = '600 22px "Space Grotesk", sans-serif';
+      const catWidth = ctx.measureText(catText).width + 40;
+      ctx.fillRect((w - catWidth) / 2, 270, catWidth, 36);
+      ctx.fillStyle = '#F3EFE9';
+      ctx.fillText(catText, w / 2, 296);
+
+      // Mission text (word wrap)
+      ctx.fillStyle = '#F3EFE9';
+      ctx.font = '600 48px "Space Grotesk", sans-serif';
+      ctx.textAlign = 'center';
+      const words = currentPrompt.text.split(' ');
+      let lines = [];
+      let line = '';
+      for (const word of words) {
+        const test = line ? line + ' ' + word : word;
+        if (ctx.measureText(test).width > w - 200) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = test;
+        }
+      }
+      if (line) lines.push(line);
+      const lineHeight = 64;
+      const startY = (h / 2) - ((lines.length - 1) * lineHeight / 2) + 40;
+      lines.forEach((l, i) => {
+        ctx.fillText(l, w / 2, startY + i * lineHeight);
+      });
+
+      // Mission code
+      ctx.fillStyle = '#818379';
+      ctx.font = '700 40px "Space Grotesk", monospace';
+      ctx.fillText(currentPrompt.code, w / 2, h - 200);
+
+      // Footer
+      ctx.fillStyle = '#5c5e56';
+      ctx.font = '400 20px "DM Sans", sans-serif';
+      ctx.fillText('dailyphotomission.com', w / 2, h - 120);
+
+      // Download or share
+      canvas.toBlob(async (blob) => {
+        if (navigator.share && navigator.canShare) {
+          const file = new File([blob], 'daily-photo-mission.png', { type: 'image/png' });
+          try {
+            await navigator.share({
+              title: 'Daily Photo Mission',
+              text: `Today's mission: ${currentPrompt.text} ${currentPrompt.code}`,
+              files: [file]
+            });
+          } catch {
+            downloadBlob(blob);
+          }
+        } else {
+          downloadBlob(blob);
+        }
+      }, 'image/png');
+    }
+
+    function downloadBlob(blob) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'daily-photo-mission.png';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // ============================================================
+    // Past missions drawer
+    // ============================================================
+    function openDrawer() {
+      const list = document.getElementById('drawerList');
+      list.innerHTML = '';
+      const today = getTodayString();
+      const maxDays = Math.min(daysSince(LAUNCH_DATE, today), 30);
+
+      for (let i = 0; i <= maxDays; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        const prompt = getPromptForDate(dStr);
+
+        const item = document.createElement('div');
+        item.className = 'drawer-item';
+        item.innerHTML = `
+          <div class="drawer-item-date">
+            <span>${i === 0 ? 'Today' : i === 1 ? 'Yesterday' : getShortDate(dStr)}</span>
+            <span class="drawer-item-code">${prompt.code}</span>
+          </div>
+          <div class="drawer-item-text">${prompt.text}</div>
+          <span class="drawer-item-category">${prompt.category}</span>
+        `;
+        list.appendChild(item);
+      }
+
+      document.getElementById('drawerOverlay').classList.add('open');
+      document.getElementById('drawer').classList.add('open');
+    }
+
+    function closeDrawer() {
+      document.getElementById('drawerOverlay').classList.remove('open');
+      document.getElementById('drawer').classList.remove('open');
+    }
+
+    // ============================================================
+    // Init
+    // ============================================================
+    document.getElementById('dateText').textContent = getFormattedDate();
+    displayStreak();
+
+    // Register service worker for PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>
