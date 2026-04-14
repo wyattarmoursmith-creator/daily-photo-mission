@@ -1232,9 +1232,11 @@
     document.getElementById('dateText').textContent = getFormattedDate();
     displayStreak();
 
-    // Register service worker for PWA
+    // Unregister any old service workers that may be caching stale responses
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(r => r.unregister());
+      });
     }
   </script>
 </body>
