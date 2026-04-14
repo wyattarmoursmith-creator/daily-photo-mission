@@ -1024,10 +1024,15 @@
       let i = 0;
       const baseSpeed = 65;
 
+      function tap() {
+        if (navigator.vibrate) navigator.vibrate(8);
+      }
+
       function typeNext() {
         if (i < text.length) {
           const cursor = el.querySelector('.cursor');
           if (cursor) cursor.insertAdjacentText('beforebegin', text[i]);
+          if (text[i] !== ' ') tap();
           i++;
           // Uneven rhythm — pauses at punctuation, slight variance per key
           let delay = baseSpeed + Math.random() * 40;
