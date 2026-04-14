@@ -1,5 +1,6 @@
-const CACHE_NAME = 'dpm-v2';
-const ASSETS = ['/', '/index.html', '/manifest.json'];
+const CACHE_NAME = 'dpm-v3';
+const BASE = '/daily-photo-mission/';
+const ASSETS = [BASE, BASE + 'index.html', BASE + 'manifest.json'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)));
