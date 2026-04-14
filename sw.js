@@ -1,9 +1,6 @@
-const CACHE_NAME = 'dpm-v3';
-const BASE = '/daily-photo-mission/';
-const ASSETS = [BASE, BASE + 'index.html', BASE + 'manifest.json'];
+const CACHE_NAME = 'dpm-v4';
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)));
   self.skipWaiting();
 });
 
@@ -16,6 +13,6 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request))
+    fetch(e.request).catch(() => caches.match(e.request))
   );
 });
