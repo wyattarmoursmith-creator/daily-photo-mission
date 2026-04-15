@@ -4,6 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Daily Photo Mission</title>
+  <meta name="description" content="One prompt. One day. Everyone shoots. A free daily photography prompt app for creatives everywhere.">
+  <meta property="og:title" content="Daily Photo Mission">
+  <meta property="og:description" content="One prompt. One day. Everyone shoots. Get a new photography mission every day.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://mission.wyattsmithmedia.com">
+  <meta property="og:image" content="https://mission.wyattsmithmedia.com/app-icon-512.png">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Daily Photo Mission">
+  <meta name="twitter:description" content="One prompt. One day. Everyone shoots.">
+  <meta name="twitter:image" content="https://mission.wyattsmithmedia.com/app-icon-512.png">
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#1a1f1a">
   <meta name="mobile-web-app-capable" content="yes">
@@ -84,17 +94,6 @@
       transform: translateY(20px);
       animation: fadeUp 0.8s var(--spring) 0.1s forwards;
     }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      margin-bottom: 8px;
-    }
-
-    .brand-logo { width: 44px; height: 40px; }
-    .brand-logo svg { width: 100%; height: 100%; }
 
     .header h1 {
       font-family: 'Space Grotesk', sans-serif;
@@ -208,9 +207,7 @@
       opacity: 1;
     }
 
-    /* Scan line animation (disabled) */
     .scan-line { display: none; }
-    }
 
     .card-date {
       font-family: 'Space Grotesk', sans-serif;
@@ -872,7 +869,6 @@
     </div>
 
     <div class="mission-card" id="missionCard">
-      <div class="scan-line" id="scanLine"></div>
       <div class="card-date" id="cardDate">
         <span class="dot"></span>
         <span id="dateText"></span>
@@ -1411,7 +1407,7 @@
       // Footer
       ctx.fillStyle = '#5c5e56';
       ctx.font = '400 20px "DM Sans", sans-serif';
-      ctx.fillText('dailyphotomission.com', w / 2, h - 120);
+      ctx.fillText('mission.wyattsmithmedia.com', w / 2, h - 120);
 
       // Download or share
       canvas.toBlob(async (blob) => {
@@ -1581,11 +1577,9 @@
     document.getElementById('dateText').textContent = getFormattedDate();
     displayStreak();
 
-    // Unregister any old service workers that may be caching stale responses
+    // Register service worker for offline PWA support
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(regs => {
-        regs.forEach(r => r.unregister());
-      });
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
     }
   </script>
 </body>
