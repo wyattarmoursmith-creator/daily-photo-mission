@@ -1195,7 +1195,7 @@
       } else {
         newCount = 1;
       }
-      localStorage.setItem('dpm_streak', JSON.stringify({ count: newCount, lastDate: today }));
+      try { localStorage.setItem('dpm_streak', JSON.stringify({ count: newCount, lastDate: today })); } catch {}
       return newCount;
     }
 
@@ -1246,6 +1246,28 @@
     // ============================================================
     let currentPrompt = null;
 
+    // Instant reveal for returning users (no animation)
+    function showPromptInstant(prompt) {
+      currentPrompt = prompt;
+      const card = document.getElementById('missionCard');
+      const textEl = document.getElementById('missionText');
+      const badge = document.getElementById('categoryBadge');
+      const codeVal = document.getElementById('missionCodeValue');
+      const cardAction = document.getElementById('cardAction');
+
+      cardAction.style.display = 'none';
+      textEl.textContent = prompt.text;
+      badge.textContent = prompt.category;
+      codeVal.textContent = prompt.code;
+      card.classList.add('active');
+
+      document.getElementById('btnGenerate').classList.remove('hidden');
+      document.getElementById('btnShare').classList.remove('hidden');
+      document.getElementById('btnPast').classList.remove('hidden');
+
+      startCountdown();
+    }
+
     function showPrompt(prompt) {
       currentPrompt = prompt;
       const card = document.getElementById('missionCard');
@@ -1273,6 +1295,9 @@
           document.getElementById('btnGenerate').classList.remove('hidden');
           document.getElementById('btnShare').classList.remove('hidden');
           document.getElementById('btnPast').classList.remove('hidden');
+
+          // Persist that today's mission was revealed
+          try { localStorage.setItem('dpm_revealed', getTodayString()); } catch {}
         });
 
         // Start countdown
@@ -1308,6 +1333,14 @@
         tomorrow.setDate(tomorrow.getDate() + 1);
         tomorrow.setHours(0, 0, 0, 0);
         const diff = tomorrow - now;
+        if (diff <= 0) {
+          clearInterval(countdownInterval);
+          el.innerHTML = '<span class="countdown-time">New mission available!</span>';
+          // Reset state so tapping the button reveals tomorrow's mission
+          try { localStorage.removeItem('dpm_revealed'); } catch {}
+          document.getElementById('btnGenerate').textContent = 'Generate Today\'s Mission';
+          return;
+        }
         const h = Math.floor(diff / 3600000);
         const m = Math.floor((diff % 3600000) / 60000);
         const s = Math.floor((diff % 60000) / 1000);
@@ -1481,7 +1514,9 @@
     // Email capture
     // ============================================================
     function shouldShowEmail() {
-      return !localStorage.getItem('dpm_email_captured') && !localStorage.getItem('dpm_email_dismissed');
+      try {
+        return !localStorage.getItem('dpm_email_captured') && !localStorage.getItem('dpm_email_dismissed');
+      } catch { return false; }
     }
 
     let pendingPrompt = null;
@@ -1497,7 +1532,7 @@
     }
 
     function dismissEmail() {
-      localStorage.setItem('dpm_email_dismissed', 'true');
+      try { localStorage.setItem('dpm_email_dismissed', 'true'); } catch {}
       closeEmailModal();
       if (pendingPrompt) {
         showPrompt(pendingPrompt);
@@ -1520,7 +1555,7 @@
         headers: { 'Accept': 'application/json' }
       }).then(res => {
         if (res.ok) {
-          localStorage.setItem('dpm_email_captured', 'true');
+          try { localStorage.setItem('dpm_email_captured', 'true'); } catch {}
           form.classList.add('submitted');
           setTimeout(() => {
             closeEmailModal();
@@ -1574,8 +1609,21 @@
       }
     }
 
+    // Escape key closes modals/drawer
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { closeDrawer(); closeEmailModal(); }
+    });
+
     document.getElementById('dateText').textContent = getFormattedDate();
     displayStreak();
+
+    // If user already revealed today's mission, show it instantly
+    try {
+      if (localStorage.getItem('dpm_revealed') === getTodayString()) {
+        const prompt = getPromptForDate(getTodayString());
+        showPromptInstant(prompt);
+      }
+    } catch {}
 
     // Register service worker for offline PWA support
     if ('serviceWorker' in navigator) {
