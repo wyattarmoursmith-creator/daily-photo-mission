@@ -1166,7 +1166,7 @@
         hash = ((hash << 13) ^ hash) | 0;
         hash = (hash * 2654435761) | 0;
       }
-      return '#' + String(Math.abs(hash) % 100000).padStart(5, '0');
+      return '#DPM' + String(Math.abs(hash) % 100000).padStart(5, '0');
     }
 
     function getPromptForDate(dateStr) {
