@@ -706,6 +706,150 @@
       .mission-text { font-size: 26px; }
     }
 
+    /* --- Email Capture Modal --- */
+    .email-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 12, 10, 0.85);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      backdrop-filter: blur(8px);
+    }
+
+    .email-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .email-modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border-accent);
+      border-radius: 20px;
+      padding: 32px 28px;
+      width: 100%;
+      max-width: 400px;
+      position: relative;
+      transform: translateY(20px) scale(0.96);
+      transition: transform 0.4s var(--spring);
+    }
+
+    .email-overlay.open .email-modal {
+      transform: translateY(0) scale(1);
+    }
+
+    .email-dismiss {
+      position: absolute;
+      top: 14px;
+      right: 18px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 22px;
+      cursor: pointer;
+      padding: 4px 8px;
+      line-height: 1;
+    }
+
+    .email-dismiss:hover {
+      color: var(--text-secondary);
+    }
+
+    .email-capture-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+      padding-right: 24px;
+    }
+
+    .email-capture-sub {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    #emailForm {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .email-input {
+      width: 100%;
+      padding: 14px 16px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      color: var(--text-primary);
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .email-input:focus {
+      border-color: var(--border-accent);
+    }
+
+    .email-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .email-submit {
+      margin-top: 4px;
+      font-size: 15px;
+      padding: 14px;
+    }
+
+    .email-success {
+      display: none;
+      text-align: center;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text-primary);
+      padding: 20px 0 4px;
+    }
+
+    .email-skip {
+      display: block;
+      width: 100%;
+      margin-top: 12px;
+      padding: 10px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      cursor: pointer;
+      transition: color 0.2s ease;
+    }
+
+    .email-skip:hover {
+      color: var(--text-secondary);
+    }
+
+    #emailForm.submitted {
+      display: none;
+    }
+
+    #emailForm.submitted ~ .email-skip {
+      display: none;
+    }
+
+    #emailForm.submitted + .email-success {
+      display: block;
+      animation: fadeUp 0.4s var(--spring) both;
+    }
+
     /* --- Share canvas (hidden) --- */
     #shareCanvas { display: none; }
   </style>
@@ -789,6 +933,22 @@
         </button>
       </div>
       <div class="countdown" id="countdown"></div>
+    </div>
+
+    <!-- Email Capture Modal -->
+    <div class="email-overlay" id="emailOverlay">
+      <div class="email-modal" id="emailModal">
+        <button class="email-dismiss" onclick="dismissEmail()">&times;</button>
+        <div class="email-capture-title">Thanks for checking out Daily Photo Mission</div>
+        <div class="email-capture-sub">This app is free and always will be. Drop your email to get notified when new features and updates drop.</div>
+        <form id="emailForm" onsubmit="submitEmail(event)">
+          <input type="text" name="name" placeholder="First name" class="email-input" required>
+          <input type="email" name="email" placeholder="Email" class="email-input" required>
+          <button type="submit" class="btn-generate email-submit" id="emailSubmitBtn">Count me in</button>
+        </form>
+        <div class="email-success" id="emailSuccess">You're in. Enjoy today's mission.</div>
+        <button class="email-skip" onclick="dismissEmail()">Skip for now</button>
+      </div>
     </div>
 
     <footer class="footer">
@@ -1128,7 +1288,13 @@
       const prompt = getPromptForDate(getTodayString());
       const streak = updateStreak();
       displayStreak();
-      showPrompt(prompt);
+
+      if (shouldShowEmail()) {
+        pendingPrompt = prompt;
+        showEmailModal();
+      } else {
+        showPrompt(prompt);
+      }
     }
 
     // ============================================================
@@ -1315,6 +1481,68 @@
     // ============================================================
     // Init
     // ============================================================
+    // ============================================================
+    // Email capture
+    // ============================================================
+    function shouldShowEmail() {
+      return !localStorage.getItem('dpm_email_captured') && !localStorage.getItem('dpm_email_dismissed');
+    }
+
+    let pendingPrompt = null;
+
+    function showEmailModal() {
+      const el = document.getElementById('emailOverlay');
+      el.classList.add('open');
+    }
+
+    function closeEmailModal() {
+      const el = document.getElementById('emailOverlay');
+      el.classList.remove('open');
+    }
+
+    function dismissEmail() {
+      localStorage.setItem('dpm_email_dismissed', 'true');
+      closeEmailModal();
+      if (pendingPrompt) {
+        showPrompt(pendingPrompt);
+        pendingPrompt = null;
+      }
+    }
+
+    function submitEmail(e) {
+      e.preventDefault();
+      const form = document.getElementById('emailForm');
+      const btn = document.getElementById('emailSubmitBtn');
+      const data = new FormData(form);
+
+      btn.textContent = 'Sending...';
+      btn.disabled = true;
+
+      fetch('https://formspree.io/f/mpqkwnok', {
+        method: 'POST',
+        body: data,
+        headers: { 'Accept': 'application/json' }
+      }).then(res => {
+        if (res.ok) {
+          localStorage.setItem('dpm_email_captured', 'true');
+          form.classList.add('submitted');
+          setTimeout(() => {
+            closeEmailModal();
+            if (pendingPrompt) {
+              showPrompt(pendingPrompt);
+              pendingPrompt = null;
+            }
+          }, 1500);
+        } else {
+          btn.textContent = 'Try again';
+          btn.disabled = false;
+        }
+      }).catch(() => {
+        btn.textContent = 'Try again';
+        btn.disabled = false;
+      });
+    }
+
     // ============================================================
     // Easter egg — star pop
     // ============================================================
