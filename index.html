@@ -50,7 +50,7 @@
     :root {
       --bg-base: #1a1f1a;
       --bg-surface: #212621;
-      --bg-elevated: #2B332B;
+
       --bg-card: #222822;
       --text-primary: #F3EFE9;
       --text-secondary: #818379;
@@ -131,6 +131,8 @@
       color: var(--accent-dim);
       cursor: pointer;
       transition: transform 0.3s var(--spring), color 0.3s ease;
+      outline: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .streak-star.popped {
@@ -145,11 +147,6 @@
       50% { transform: scale(0.8) rotate(-5deg); }
       70% { transform: scale(1.2) rotate(3deg); }
       100% { transform: scale(1) rotate(0deg); }
-    }
-
-    .star-particles {
-      position: absolute;
-      pointer-events: none;
     }
 
     .star-particle {
@@ -208,7 +205,6 @@
       opacity: 1;
     }
 
-    .scan-line { display: none; }
 
     .card-date {
       font-family: 'Space Grotesk', sans-serif;
@@ -323,7 +319,7 @@
       letter-spacing: 2px;
     }
 
-    .btn-copy, .btn-share {
+    .btn-copy {
       display: flex;
       align-items: center;
       gap: 6px;
@@ -340,15 +336,15 @@
       white-space: nowrap;
     }
 
-    .btn-copy:hover, .btn-share:hover {
+    .btn-copy:hover {
       background: var(--accent-glow-strong);
     }
 
-    .btn-copy:active, .btn-share:active {
+    .btn-copy:active {
       transform: scale(0.96);
     }
 
-    .btn-copy svg, .btn-share svg {
+    .btn-copy svg {
       width: 14px;
       height: 14px;
     }
@@ -504,7 +500,11 @@
       pointer-events: none;
     }
 
-    .btn-secondary, .btn-generate {
+    .btn-secondary {
+      transition: opacity 0.5s var(--spring), transform 0.5s var(--spring);
+    }
+
+    .btn-generate.hidden {
       transition: opacity 0.5s var(--spring), transform 0.5s var(--spring);
     }
 
@@ -870,7 +870,7 @@
       <svg class="streak-star" id="streakStar" onclick="popStar()" onkeydown="if(event.key==='Enter'||event.key===' ')popStar()" tabindex="0" role="button" aria-label="Star animation" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
       </svg>
-      <span><span class="streak-count" id="streakCount">0</span> day streak</span>
+      <span id="streakLabel"><span class="streak-count" id="streakCount">0</span> day streak</span>
     </div>
 
     <div class="mission-card" id="missionCard">
@@ -1140,9 +1140,11 @@
     }
 
     function daysSince(startStr, todayStr) {
-      const start = new Date(startStr + 'T00:00:00');
-      const today = new Date(todayStr + 'T00:00:00');
-      return Math.floor((today - start) / 86400000);
+      const [sy, sm, sd] = startStr.split('-').map(Number);
+      const [ty, tm, td] = todayStr.split('-').map(Number);
+      const start = Date.UTC(sy, sm - 1, sd);
+      const today = Date.UTC(ty, tm - 1, td);
+      return Math.round((today - start) / 86400000);
     }
 
     function getFormattedDate(dateStr) {
@@ -1206,8 +1208,12 @@
 
     function displayStreak() {
       const streak = getStreak();
-      const el = document.querySelector('#streakBar .streak-count');
-      if (el) el.textContent = streak.count;
+      const label = document.getElementById('streakLabel');
+      if (label) {
+        const n = streak.count;
+        const word = n === 1 ? 'day' : 'days';
+        label.innerHTML = `<span class="streak-count">${n}</span> ${word}`;
+      }
     }
 
     // ============================================================
@@ -1427,6 +1433,7 @@
       ctx.letterSpacing = '4px';
       ctx.textAlign = 'center';
       ctx.fillText('DAILY PHOTO MISSION', w / 2, 160);
+      ctx.letterSpacing = '0px';
 
       // Date
       ctx.fillStyle = '#5c5e56';
@@ -1477,16 +1484,16 @@
 
       // Download or share
       canvas.toBlob(async (blob) => {
-        if (navigator.share && navigator.canShare) {
-          const file = new File([blob], 'daily-photo-mission.png', { type: 'image/png' });
+        const file = new File([blob], 'daily-photo-mission.png', { type: 'image/png' });
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
           try {
             await navigator.share({
               title: 'Daily Photo Mission',
               text: `Today's mission: ${currentPrompt.text} ${currentPrompt.code}`,
               files: [file]
             });
-          } catch {
-            downloadBlob(blob);
+          } catch (err) {
+            if (err.name !== 'AbortError') downloadBlob(blob);
           }
         } else {
           downloadBlob(blob);
@@ -1647,7 +1654,7 @@
 
     // Escape key closes modals/drawer
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { closeDrawer(); closeEmailModal(); }
+      if (e.key === 'Escape') { closeDrawer(); dismissEmail(); }
     });
 
     document.getElementById('dateText').textContent = getFormattedDate();
