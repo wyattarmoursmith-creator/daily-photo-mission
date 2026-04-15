@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Daily Photo Mission</title>
+  <link rel="icon" href="./favicon.ico" type="image/x-icon">
   <meta name="description" content="One prompt. One day. Everyone shoots. A free daily photography prompt app for creatives everywhere.">
   <meta property="og:title" content="Daily Photo Mission">
   <meta property="og:description" content="One prompt. One day. Everyone shoots. Get a new photography mission every day.">
@@ -243,6 +244,10 @@
       min-height: 0;
       display: flex;
       align-items: center;
+    }
+
+    .mission-card.active .mission-text {
+      display: block;
     }
 
     .card-action {
@@ -862,7 +867,7 @@
     </header>
 
     <div class="streak-bar" id="streakBar">
-      <svg class="streak-star" id="streakStar" onclick="popStar()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg class="streak-star" id="streakStar" onclick="popStar()" onkeydown="if(event.key==='Enter'||event.key===' ')popStar()" tabindex="0" role="button" aria-label="Star animation" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
       </svg>
       <span><span class="streak-count" id="streakCount">0</span> day streak</span>
@@ -1297,7 +1302,16 @@
           document.getElementById('btnPast').classList.remove('hidden');
 
           // Persist that today's mission was revealed
-          try { localStorage.setItem('dpm_revealed', getTodayString()); } catch {}
+          try {
+            const revealed = JSON.parse(localStorage.getItem('dpm_revealed_dates') || '[]');
+            const today = getTodayString();
+            if (!revealed.includes(today)) {
+              revealed.push(today);
+              // Keep last 60 days max
+              if (revealed.length > 60) revealed.shift();
+              localStorage.setItem('dpm_revealed_dates', JSON.stringify(revealed));
+            }
+          } catch {}
         });
 
         // Start countdown
@@ -1336,8 +1350,7 @@
         if (diff <= 0) {
           clearInterval(countdownInterval);
           el.innerHTML = '<span class="countdown-time">New mission available!</span>';
-          // Reset state so tapping the button reveals tomorrow's mission
-          try { localStorage.removeItem('dpm_revealed'); } catch {}
+          // Reset so tapping the button reveals tomorrow's mission (dates stay for history)
           document.getElementById('btnGenerate').textContent = 'Generate Today\'s Mission';
           return;
         }
@@ -1359,18 +1372,38 @@
       const code = document.getElementById('missionCodeValue').textContent;
       const btn = document.getElementById('btnCopy');
       const label = document.getElementById('copyLabel');
-      navigator.clipboard.writeText(code).then(() => {
+
+      function onSuccess() {
         btn.classList.add('copied');
         label.textContent = 'Copied!';
         setTimeout(() => { btn.classList.remove('copied'); label.textContent = 'Copy'; }, 2000);
-      });
+      }
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code).then(onSuccess).catch(() => fallbackCopy(code, onSuccess));
+      } else {
+        fallbackCopy(code, onSuccess);
+      }
+    }
+
+    function fallbackCopy(text, cb) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); cb(); } catch {}
+      ta.remove();
     }
 
     // ============================================================
     // Share card (canvas-based)
     // ============================================================
-    function shareMission() {
+    async function shareMission() {
       if (!currentPrompt) return;
+      // Wait for fonts to be ready so canvas renders them correctly
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
       const canvas = document.getElementById('shareCanvas');
       const ctx = canvas.getContext('2d');
       const w = 1080, h = 1080;
@@ -1478,18 +1511,21 @@
       list.innerHTML = '';
       const today = getTodayString();
       const maxDays = Math.min(daysSince(LAUNCH_DATE, today), 30);
+      let revealedDates = [];
+      try { revealedDates = JSON.parse(localStorage.getItem('dpm_revealed_dates') || '[]'); } catch {}
 
       for (let i = 0; i <= maxDays; i++) {
         const d = new Date();
         d.setDate(d.getDate() - i);
         const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
         const prompt = getPromptForDate(dStr);
+        const completed = revealedDates.includes(dStr);
 
         const item = document.createElement('div');
         item.className = 'drawer-item';
         item.innerHTML = `
           <div class="drawer-item-date">
-            <span>${i === 0 ? 'Today' : i === 1 ? 'Yesterday' : getShortDate(dStr)}</span>
+            <span>${i === 0 ? 'Today' : i === 1 ? 'Yesterday' : getShortDate(dStr)}${completed ? ' <span style="color:var(--text-secondary)">&#10003;</span>' : ''}</span>
             <span class="drawer-item-code">${prompt.code}</span>
           </div>
           <div class="drawer-item-text">${prompt.text}</div>
@@ -1619,7 +1655,8 @@
 
     // If user already revealed today's mission, show it instantly
     try {
-      if (localStorage.getItem('dpm_revealed') === getTodayString()) {
+      const revealedDates = JSON.parse(localStorage.getItem('dpm_revealed_dates') || '[]');
+      if (revealedDates.includes(getTodayString())) {
         const prompt = getPromptForDate(getTodayString());
         showPromptInstant(prompt);
       }
