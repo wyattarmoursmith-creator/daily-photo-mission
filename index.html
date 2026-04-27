@@ -170,38 +170,78 @@
 
     /* --- Mission Card --- */
     .mission-card {
+      --gx: 50%;
+      --gy: 0%;
       width: 100%;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 20px;
+      background:
+        radial-gradient(120% 80% at var(--gx) var(--gy), rgba(243, 239, 233, 0.06), transparent 60%),
+        linear-gradient(135deg, rgba(243, 239, 233, 0.04), rgba(243, 239, 233, 0.01) 40%, rgba(0, 0, 0, 0.15)),
+        rgba(34, 40, 34, 0.55);
+      backdrop-filter: blur(24px) saturate(140%);
+      -webkit-backdrop-filter: blur(24px) saturate(140%);
+      border: 1px solid rgba(243, 239, 233, 0.08);
+      border-radius: 24px;
       padding: 32px 28px;
       position: relative;
       overflow: hidden;
       opacity: 0;
       transform: translateY(20px);
       animation: fadeUp 0.8s var(--spring) 0.25s forwards;
-      transition: border-color 0.6s ease, box-shadow 0.6s ease;
+      transition: border-color 0.6s ease, box-shadow 0.6s ease, background 0.3s ease;
+      box-shadow:
+        0 1px 0 rgba(243, 239, 233, 0.06) inset,
+        0 -1px 0 rgba(0, 0, 0, 0.2) inset,
+        0 8px 32px rgba(0, 0, 0, 0.35),
+        0 2px 8px rgba(0, 0, 0, 0.2);
     }
 
     .mission-card.active {
-      border-color: var(--border-accent);
-      box-shadow: 0 0 40px var(--accent-glow), 0 8px 32px rgba(0, 0, 0, 0.3);
+      border-color: rgba(243, 239, 233, 0.12);
+      box-shadow:
+        0 1px 0 rgba(243, 239, 233, 0.08) inset,
+        0 -1px 0 rgba(0, 0, 0, 0.2) inset,
+        0 0 60px rgba(243, 239, 233, 0.06),
+        0 12px 40px rgba(0, 0, 0, 0.4),
+        0 2px 12px rgba(0, 0, 0, 0.25);
     }
 
-    /* Top scan line */
+    /* Specular highlight on top edge — follows pointer */
     .mission-card::before {
       content: '';
       position: absolute;
       top: 0;
       left: 0;
       right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--accent-dim), transparent);
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(243, 239, 233, 0.08) calc(var(--gx) - 30%),
+        rgba(243, 239, 233, 0.4) var(--gx),
+        rgba(243, 239, 233, 0.08) calc(var(--gx) + 30%),
+        transparent 100%
+      );
+      pointer-events: none;
+      transition: background 0.15s ease;
+    }
+
+    /* Soft inner glow that drifts */
+    .mission-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 24px;
+      background: radial-gradient(
+        300px 200px at var(--gx) var(--gy),
+        rgba(243, 239, 233, 0.05),
+        transparent 70%
+      );
+      pointer-events: none;
       opacity: 0;
       transition: opacity 0.4s ease;
     }
 
-    .mission-card.active::before {
+    .mission-card.active::after {
       opacity: 1;
     }
 
@@ -685,24 +725,39 @@
     /* --- Background --- */
     .bg-glow {
       position: fixed;
-      width: 300px;
-      height: 300px;
+      width: 420px;
+      height: 420px;
       border-radius: 50%;
-      filter: blur(120px);
+      filter: blur(110px);
       pointer-events: none;
       z-index: -1;
+      will-change: transform;
+      transition: transform 0.6s ease-out;
     }
 
     .bg-glow-1 {
-      top: -100px;
-      right: -100px;
-      background: rgba(129, 131, 121, 0.08);
+      top: -120px;
+      right: -120px;
+      background: rgba(129, 131, 121, 0.18);
     }
 
     .bg-glow-2 {
-      bottom: -100px;
-      left: -100px;
-      background: rgba(129, 131, 121, 0.06);
+      bottom: -120px;
+      left: -120px;
+      background: rgba(129, 131, 121, 0.14);
+    }
+
+    .bg-glow-3 {
+      top: 40%;
+      left: 30%;
+      width: 300px;
+      height: 300px;
+      background: rgba(243, 239, 233, 0.05);
+      filter: blur(100px);
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: -1;
     }
 
     /* --- Animations --- */
@@ -879,8 +934,9 @@
   </style>
 </head>
 <body>
-  <div class="bg-glow bg-glow-1"></div>
-  <div class="bg-glow bg-glow-2"></div>
+  <div class="bg-glow bg-glow-1" id="bgGlow1"></div>
+  <div class="bg-glow bg-glow-2" id="bgGlow2"></div>
+  <div class="bg-glow-3" id="bgGlow3"></div>
 
   <div class="container">
     <header class="header">
@@ -1697,6 +1753,82 @@
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { closeDrawer(); dismissEmail(); }
     });
+
+    // ============================================================
+    // Liquid glass — dynamic highlights on the mission card
+    // ============================================================
+    (function setupGlassEffect() {
+      const card = document.getElementById('missionCard');
+      const glow1 = document.getElementById('bgGlow1');
+      const glow2 = document.getElementById('bgGlow2');
+      const glow3 = document.getElementById('bgGlow3');
+      if (!card) return;
+
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduced) return;
+
+      let targetX = 50, targetY = 0;
+      let currentX = 50, currentY = 0;
+      let raf = null;
+
+      function loop() {
+        currentX += (targetX - currentX) * 0.12;
+        currentY += (targetY - currentY) * 0.12;
+        card.style.setProperty('--gx', currentX + '%');
+        card.style.setProperty('--gy', currentY + '%');
+        if (Math.abs(targetX - currentX) > 0.1 || Math.abs(targetY - currentY) > 0.1) {
+          raf = requestAnimationFrame(loop);
+        } else {
+          raf = null;
+        }
+      }
+
+      function startLoop() { if (!raf) raf = requestAnimationFrame(loop); }
+
+      // Pointer tracking on card (desktop)
+      card.addEventListener('pointermove', (e) => {
+        const rect = card.getBoundingClientRect();
+        targetX = ((e.clientX - rect.left) / rect.width) * 100;
+        targetY = ((e.clientY - rect.top) / rect.height) * 100;
+        startLoop();
+      });
+
+      card.addEventListener('pointerleave', () => {
+        targetX = 50;
+        targetY = 0;
+        startLoop();
+      });
+
+      // Scroll parallax — background glows drift
+      let scrollRaf = null;
+      function onScroll() {
+        if (scrollRaf) return;
+        scrollRaf = requestAnimationFrame(() => {
+          const y = window.scrollY;
+          if (glow1) glow1.style.transform = `translate3d(0, ${y * 0.15}px, 0)`;
+          if (glow2) glow2.style.transform = `translate3d(0, ${-y * 0.1}px, 0)`;
+          if (glow3) glow3.style.transform = `translate3d(0, ${y * 0.25}px, 0)`;
+          // Card highlight shifts slightly with scroll for ambient motion
+          const rect = card.getBoundingClientRect();
+          const visibility = 1 - Math.min(1, Math.abs(rect.top) / window.innerHeight);
+          targetY = (1 - visibility) * 30;
+          startLoop();
+          scrollRaf = null;
+        });
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
+
+      // Device tilt — gyroscope-driven highlights on mobile
+      if (window.DeviceOrientationEvent) {
+        window.addEventListener('deviceorientation', (e) => {
+          if (e.gamma == null || e.beta == null) return;
+          // gamma: left/right tilt (-90 to 90), beta: front/back (-180 to 180)
+          targetX = 50 + Math.max(-30, Math.min(30, e.gamma)) * 1.2;
+          targetY = Math.max(-10, Math.min(40, (e.beta - 30) * 0.5));
+          startLoop();
+        }, true);
+      }
+    })();
 
     document.getElementById('dateText').textContent = getFormattedDate();
     displayStreak();
