@@ -363,29 +363,6 @@
     }
 
     /* --- Community Tag --- */
-    .community-tag {
-      display: none;
-      align-items: center;
-      gap: 6px;
-      margin-top: 16px;
-      padding-top: 16px;
-      border-top: 1px solid var(--border);
-      font-size: 13px;
-      color: var(--text-muted);
-    }
-
-    .mission-card.active .community-tag {
-      display: flex;
-      animation: fadeUp 0.4s var(--spring) 0.3s both;
-    }
-
-    .community-tag svg {
-      width: 14px;
-      height: 14px;
-      color: var(--accent-dim);
-      flex-shrink: 0;
-    }
-
     .category-badge {
       display: inline-block;
       font-size: 11px;
@@ -637,7 +614,52 @@
       background: var(--accent-glow);
       padding: 3px 8px;
       border-radius: 4px;
-      margin-top: 8px;
+    }
+
+    .drawer-item-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .drawer-copy-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .drawer-copy-btn:hover {
+      color: var(--accent);
+      border-color: var(--border-accent);
+      background: var(--accent-glow);
+    }
+
+    .drawer-copy-btn:active {
+      transform: scale(0.96);
+    }
+
+    .drawer-copy-btn svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .drawer-copy-btn.copied {
+      color: #34d399;
+      border-color: rgba(52, 211, 153, 0.3);
+      background: rgba(52, 211, 153, 0.1);
     }
 
     /* --- Footer --- */
@@ -901,15 +923,6 @@
         </div>
         <div class="mission-code-hint">Tag your shots with this code so others can find today's mission</div>
       </div>
-      <div class="community-tag">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-          <circle cx="9" cy="7" r="4"/>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-        </svg>
-        <span>Everyone's shooting this today</span>
-      </div>
     </div>
 
     <div class="actions">
@@ -953,7 +966,7 @@
     </div>
 
     <footer class="footer">
-      <p>V1 &middot; Made by <a href="https://instagram.com/wyattarmoursmith" target="_blank" class="footer-link">Wyatt Smith</a> &middot; 2026</p>
+      <p>V1.1 &middot; Made by <a href="https://instagram.com/wyattarmoursmith" target="_blank" class="footer-link">Wyatt Smith</a> &middot; 2026</p>
     </footer>
   </div>
 
@@ -1403,6 +1416,24 @@
       ta.remove();
     }
 
+    function copyDrawerCaption(btn) {
+      const caption = btn.getAttribute('data-caption');
+      const label = btn.querySelector('span');
+      const original = label.textContent;
+
+      function onSuccess() {
+        btn.classList.add('copied');
+        label.textContent = 'Copied!';
+        setTimeout(() => { btn.classList.remove('copied'); label.textContent = original; }, 2000);
+      }
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(caption).then(onSuccess).catch(() => fallbackCopy(caption, onSuccess));
+      } else {
+        fallbackCopy(caption, onSuccess);
+      }
+    }
+
     // ============================================================
     // Share card (canvas-based)
     // ============================================================
@@ -1530,13 +1561,23 @@
 
         const item = document.createElement('div');
         item.className = 'drawer-item';
+        const captionText = `${prompt.text} ${prompt.code}`.replace(/"/g, '&quot;');
         item.innerHTML = `
           <div class="drawer-item-date">
             <span>${i === 0 ? 'Today' : i === 1 ? 'Yesterday' : getShortDate(dStr)}${completed ? ' <span style="color:var(--text-secondary)">&#10003;</span>' : ''}</span>
             <span class="drawer-item-code">${prompt.code}</span>
           </div>
           <div class="drawer-item-text">${prompt.text}</div>
-          <span class="drawer-item-category">${prompt.category}</span>
+          <div class="drawer-item-row">
+            <span class="drawer-item-category">${prompt.category}</span>
+            <button class="drawer-copy-btn" data-caption="${captionText}" onclick="copyDrawerCaption(this)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+              <span>Copy caption</span>
+            </button>
+          </div>
         `;
         list.appendChild(item);
       }
