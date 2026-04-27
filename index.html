@@ -64,9 +64,17 @@
       --spring: cubic-bezier(0.22, 1, 0.36, 1);
     }
 
+    html, body {
+      background: var(--bg-base);
+    }
+
     body {
       font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--bg-base);
+      background:
+        radial-gradient(ellipse 80% 50% at 50% 0%, rgba(129, 131, 121, 0.06), transparent 70%),
+        radial-gradient(ellipse 60% 40% at 50% 100%, rgba(129, 131, 121, 0.04), transparent 70%),
+        var(--bg-base);
+      background-attachment: fixed;
       color: var(--text-primary);
       min-height: 100dvh;
       display: flex;
@@ -725,10 +733,10 @@
     /* --- Background --- */
     .bg-glow {
       position: fixed;
-      width: 420px;
-      height: 420px;
+      width: 480px;
+      height: 480px;
       border-radius: 50%;
-      filter: blur(110px);
+      filter: blur(140px);
       pointer-events: none;
       z-index: -1;
       will-change: transform;
@@ -736,28 +744,15 @@
     }
 
     .bg-glow-1 {
-      top: -120px;
-      right: -120px;
-      background: rgba(129, 131, 121, 0.18);
+      top: -160px;
+      right: -160px;
+      background: rgba(129, 131, 121, 0.12);
     }
 
     .bg-glow-2 {
-      bottom: -120px;
-      left: -120px;
-      background: rgba(129, 131, 121, 0.14);
-    }
-
-    .bg-glow-3 {
-      top: 40%;
-      left: 30%;
-      width: 300px;
-      height: 300px;
-      background: rgba(243, 239, 233, 0.05);
-      filter: blur(100px);
-      position: fixed;
-      border-radius: 50%;
-      pointer-events: none;
-      z-index: -1;
+      bottom: -160px;
+      left: -160px;
+      background: rgba(129, 131, 121, 0.09);
     }
 
     /* --- Animations --- */
@@ -936,7 +931,6 @@
 <body>
   <div class="bg-glow bg-glow-1" id="bgGlow1"></div>
   <div class="bg-glow bg-glow-2" id="bgGlow2"></div>
-  <div class="bg-glow-3" id="bgGlow3"></div>
 
   <div class="container">
     <header class="header">
@@ -1761,7 +1755,6 @@
       const card = document.getElementById('missionCard');
       const glow1 = document.getElementById('bgGlow1');
       const glow2 = document.getElementById('bgGlow2');
-      const glow3 = document.getElementById('bgGlow3');
       if (!card) return;
 
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1807,7 +1800,6 @@
           const y = window.scrollY;
           if (glow1) glow1.style.transform = `translate3d(0, ${y * 0.15}px, 0)`;
           if (glow2) glow2.style.transform = `translate3d(0, ${-y * 0.1}px, 0)`;
-          if (glow3) glow3.style.transform = `translate3d(0, ${y * 0.25}px, 0)`;
           // Card highlight shifts slightly with scroll for ambient motion
           const rect = card.getBoundingClientRect();
           const visibility = 1 - Math.min(1, Math.abs(rect.top) / window.innerHeight);
@@ -1818,37 +1810,6 @@
       }
       window.addEventListener('scroll', onScroll, { passive: true });
 
-      // Device tilt — gyroscope-driven highlights on mobile
-      function attachTilt() {
-        window.addEventListener('deviceorientation', (e) => {
-          if (e.gamma == null || e.beta == null) return;
-          // gamma: left/right tilt (-90 to 90), beta: front/back (-180 to 180)
-          targetX = 50 + Math.max(-30, Math.min(30, e.gamma)) * 1.5;
-          targetY = Math.max(-10, Math.min(50, (e.beta - 30) * 0.7));
-          startLoop();
-        }, true);
-      }
-
-      // iOS 13+ requires explicit permission, granted on user gesture
-      if (typeof DeviceOrientationEvent !== 'undefined' &&
-          typeof DeviceOrientationEvent.requestPermission === 'function') {
-        // Wait for first user interaction to request permission
-        let requested = false;
-        const requestOnce = async () => {
-          if (requested) return;
-          requested = true;
-          try {
-            const state = await DeviceOrientationEvent.requestPermission();
-            if (state === 'granted') attachTilt();
-          } catch {}
-        };
-        // Attach to any first tap on the page
-        document.addEventListener('click', requestOnce, { once: true });
-        document.addEventListener('touchend', requestOnce, { once: true });
-      } else if (window.DeviceOrientationEvent) {
-        // Android and older iOS — no permission needed
-        attachTilt();
-      }
     })();
 
     document.getElementById('dateText').textContent = getFormattedDate();
