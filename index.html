@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Daily Photo Mission</title>
   <link rel="icon" href="./favicon.ico" type="image/x-icon">
+  <!-- Privacy-friendly analytics by Plausible -->
+  <script async src="https://plausible.io/js/pa-HijQ7UQoNbe7Jhm1KgdGD.js"></script>
+  <script>
+    window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+    plausible.init()
+  </script>
   <meta name="description" content="One prompt. One day. Everyone shoots. A free daily photography prompt app for creatives everywhere.">
   <meta property="og:title" content="Daily Photo Mission">
   <meta property="og:description" content="One prompt. One day. Everyone shoots. Get a new photography mission every day.">
@@ -1016,7 +1022,7 @@
     </div>
 
     <footer class="footer">
-      <p>V1.2 &middot; Made by <a href="https://instagram.com/wyattarmoursmith" target="_blank" class="footer-link">Wyatt Smith</a> &middot; 2026</p>
+      <p>V1.3 &middot; Made by <a href="https://instagram.com/wyattarmoursmith" target="_blank" class="footer-link">Wyatt Smith</a> &middot; 2026</p>
     </footer>
   </div>
 
@@ -1388,10 +1394,17 @@
       }, 400);
     }
 
+    // Plausible tracker helper (no-op if blocked or not loaded)
+    function track(event, props) {
+      try { if (window.plausible) window.plausible(event, props ? { props } : undefined); } catch {}
+    }
+
     function generateMission() {
       const prompt = getPromptForDate(getTodayString());
       const streak = updateStreak();
       displayStreak();
+
+      track('Generate Mission', { category: prompt.category, streak: String(streak) });
 
       if (shouldShowEmail()) {
         pendingPrompt = prompt;
@@ -1441,6 +1454,7 @@
       const code = document.getElementById('missionCodeValue').textContent;
       const btn = document.getElementById('btnCopy');
       const label = document.getElementById('copyLabel');
+      track('Copy Mission Code');
 
       function onSuccess() {
         btn.classList.add('copied');
@@ -1470,6 +1484,7 @@
       const caption = btn.getAttribute('data-caption');
       const label = btn.querySelector('span');
       const original = label.textContent;
+      track('Copy Caption');
 
       function onSuccess() {
         btn.classList.add('copied');
@@ -1489,6 +1504,7 @@
     // ============================================================
     async function shareMission() {
       if (!currentPrompt) return;
+      track('Share Mission', { category: currentPrompt.category });
       // Wait for fonts to be ready so canvas renders them correctly
       if (document.fonts && document.fonts.ready) await document.fonts.ready;
       const canvas = document.getElementById('shareCanvas');
@@ -1595,6 +1611,7 @@
     // Past missions drawer
     // ============================================================
     function openDrawer() {
+      track('Open Past Missions');
       const list = document.getElementById('drawerList');
       list.innerHTML = '';
       const today = getTodayString();
@@ -1667,6 +1684,7 @@
 
     function dismissEmail() {
       try { localStorage.setItem('dpm_email_dismissed', 'true'); } catch {}
+      track('Email Dismissed');
       closeEmailModal();
       if (pendingPrompt) {
         showPrompt(pendingPrompt);
@@ -1690,6 +1708,7 @@
       }).then(res => {
         if (res.ok) {
           try { localStorage.setItem('dpm_email_captured', 'true'); } catch {}
+          track('Email Submitted');
           form.classList.add('submitted');
           setTimeout(() => {
             closeEmailModal();
@@ -1821,6 +1840,8 @@
       if (revealedDates.includes(getTodayString())) {
         const prompt = getPromptForDate(getTodayString());
         showPromptInstant(prompt);
+        // Track returning visitor (already revealed today)
+        setTimeout(() => track('Return Visit', { totalDays: String(revealedDates.length) }), 0);
       }
     } catch {}
 
